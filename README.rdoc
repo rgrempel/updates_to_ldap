@@ -1,0 +1,9 @@
+updates_to_ldap
+===============
+
+The purpose of this gem is to allow you to mirror ActiveRecord data to LDAP.
+
+It differs from something like ActiveLDAP in that the LDAP directory is not
+the authoritative source for the information. Instead, you maintain the
+information in ActiveRecord, and merely use the LDAP as a presentational
+tool.
