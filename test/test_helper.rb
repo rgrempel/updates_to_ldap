@@ -17,7 +17,9 @@ dep.load_paths.unshift FIXTURES_PATH
 
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 $LOAD_PATH.unshift(File.dirname(__FILE__))
-    
+
+require 'updates_to_ldap'
+
 ActiveRecord::Base.establish_connection(
   :adapter => 'sqlite3',
   :database => ':memory:'
