@@ -24,7 +24,6 @@ Gem::Specification.new do |gem|
   } 
 
   # ensure the gem is built out of versioned files
-  gem.files = Dir['Rakefile', '{bin,lib,man,test,spec}/**/*',
-                  'README*', 'LICENSE*', 'init.rb'] & `git ls-files -z`.split("\0")
+  gem.files = Dir['{bin,lib,man}/**/*', 'README*', 'LICENSE*', 'init.rb'] & `git ls-files -z`.split("\0")
 end
 
