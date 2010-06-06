@@ -9,6 +9,10 @@ class ConnectionTest < ActiveSupport::TestCase
       end
       assert Person.ldap_connection.bound?, "Connection should be bound"
     end
+
+    should "be bound by the initializer" do
+      assert Person.ldap_connection.bound?, "should be bound by initializer"
+    end
     
     should "not be bound with incorrect password" do
       assert_raise LDAP::ResultError do

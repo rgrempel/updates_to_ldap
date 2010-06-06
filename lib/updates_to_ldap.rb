@@ -6,6 +6,14 @@ require 'rails'
 module UpdatesToLDAP
   class Railtie < Rails::Railtie
     config.updates_to_ldap = ActiveSupport::OrderedOptions.new
+
+    initializer :updates_to_ldap_establish_connection do
+      config = Rails.root.join("config", "updates_to_ldap.yml")
+      if File.exist? config
+        spec = YAML::load_file(config)[Rails.env].symbolize_keys
+        ActiveRecord::Base.establish_ldap_connection spec
+      end
+    end
   end
 
   module ClassMethods
