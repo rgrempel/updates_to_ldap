@@ -1,8 +1,13 @@
 require 'ldap'
-require 'active_record'
 require 'hmac-sha1'
+require 'active_model'
+require 'rails'
 
 module UpdatesToLDAP
+  class Railtie < Rails::Railtie
+    config.updates_to_ldap = ActiveSupport::OrderedOptions.new
+  end
+
   module ClassMethods
     def ldap_connection
       self.ldap_spec[:connection]
@@ -152,10 +157,16 @@ class ActiveRecord::Base
   end
     
   def self.establish_ldap_connection spec
-    self.ldap_spec = {
-      :host => 'localhost',
-      :port => 389
-    }.merge(spec.symbolize_keys) if spec
+    if spec
+      if spec.class == Symbol
+        
+      end
+
+      self.ldap_spec = {
+        :host => 'localhost',
+        :port => 389
+      }.merge(spec.symbolize_keys)
+    end
     
     self.ldap_spec[:connection] = LDAP::Conn.new self.ldap_spec[:host], self.ldap_spec[:port]
     self.ldap_spec[:connection].set_option LDAP::LDAP_OPT_PROTOCOL_VERSION, 3

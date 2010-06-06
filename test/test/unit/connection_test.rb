@@ -1,4 +1,4 @@
-require File.expand_path('../test_helper', __FILE__)
+require File.expand_path('../../test_helper', __FILE__)
 
 class ConnectionTest < ActiveSupport::TestCase
   context "The connection" do
