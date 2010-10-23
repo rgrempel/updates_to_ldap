@@ -1,4 +1,5 @@
 require 'ldap'
+require 'ldap/ldif'
 require 'hmac-sha1'
 require 'active_model'
 require 'rails'
@@ -8,17 +9,35 @@ module UpdatesToLDAP
     config.updates_to_ldap = ActiveSupport::OrderedOptions.new
 
     initializer :updates_to_ldap_establish_connection do
-      config = Rails.root.join("config", "updates_to_ldap.yml")
-      if File.exist? config
-        spec = YAML::load_file(config)[Rails.env].symbolize_keys
-        ActiveRecord::Base.establish_ldap_connection spec
-      end
+      ActiveRecord::Base.establish_default_ldap_connection
     end
   end
 
   module ClassMethods
     def ldap_connection
       self.ldap_spec[:connection]
+    end
+
+    def delete_ldap_root_dn
+      # Various more sensible ways of sorting entries by the length of dn did not work, for mysterious
+      # reasons ... this is clearly not how you would want to do it.
+      entries = []
+      ldap_connection.search(self.ldap_spec[:root_dn], LDAP::LDAP_SCOPE_SUBTREE, "objectClass=*") do |entry|
+        entries << ({
+          :length => entry.get_dn.length,
+          :dn => entry.get_dn
+        })
+      end
+      entries.sort! {|a, b| b[:length] <=> a[:length]}
+      entries.each do |entry|
+        self.ldap_connection.delete entry[:dn]
+      end
+    end
+
+    def process_ldif file
+      LDAP::LDIF.parse_file file do |record|
+        record.send self.ldap_connection
+      end
     end
 
     def check_ldap(each_line = false)
@@ -179,5 +198,13 @@ class ActiveRecord::Base
     self.ldap_spec[:connection] = LDAP::Conn.new self.ldap_spec[:host], self.ldap_spec[:port]
     self.ldap_spec[:connection].set_option LDAP::LDAP_OPT_PROTOCOL_VERSION, 3
     self.ldap_spec[:connection].bind self.ldap_spec[:bind_dn], self.ldap_spec[:bind_pw]
+  end
+
+  def self.establish_default_ldap_connection
+      config = Rails.root.join("config", "updates_to_ldap.yml")
+      if File.exist? config
+        spec = YAML::load_file(config)[Rails.env].symbolize_keys
+        ActiveRecord::Base.establish_ldap_connection spec
+      end
   end
 end

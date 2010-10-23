@@ -10,5 +10,12 @@ class ActiveSupport::TestCase
   # -- they do not yet inherit this setting
   fixtures :all
 
-  # Add more helper methods to be used by all tests here...
+  setup do
+    begin
+      Person.delete_ldap_root_dn
+    end
+    Dir[Rails.root.join "test", "fixtures", "*.ldif"].each do |ldif|
+      Person.process_ldif ldif
+    end
+  end
 end
