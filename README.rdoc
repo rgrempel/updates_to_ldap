@@ -7,3 +7,5 @@ It differs from something like ActiveLDAP in that the LDAP directory is not
 the authoritative source for the information. Instead, you maintain the
 information in ActiveRecord, and merely use the LDAP as a presentational
 tool.
+
+Note that this is a work-in-progress ... I would not suggest using it yet.
