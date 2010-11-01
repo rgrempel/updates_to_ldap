@@ -1,3 +1,21 @@
 class Person < ActiveRecord::Base
-  authenticates_to_ldap
+  updates_to_ldap
+
+  def full_name
+    "#{first_name} #{last_name}"
+  end
+
+  def dn
+    "cn=#{full_name},ou=People"
+  end
+
+  def to_ldap_hash
+    {
+      :objectClass => ['top', 'inetOrgPerson'],
+      :cn => [full_name],
+      :givenName => [first_name],
+      :sn => [last_name],
+      :mail => email.nil? ? [] : [email]
+    }
+  end
 end

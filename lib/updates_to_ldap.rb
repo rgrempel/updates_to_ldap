@@ -71,6 +71,7 @@ module UpdatesToLDAP
       end
     end
 
+    # Compares the existing ldap to what we would produce
     def check_ldap(each_line = false)
       find(:all).each do |m|
         print "#{m.dn}\n" if each_line
@@ -82,27 +83,33 @@ module UpdatesToLDAP
   end
 
   module InstanceMethods
+    # Authenticate with a challenge that was supplied to the user
     def authenticate_with_challenge password, challenge
       password == HMAC::SHA1::hexdigest( get_ldap_hash["userPassword"][0], challenge )
     end
 
+    # Authenticate by binding, or with challenge if supplied
     def authenticate (password, challenge="")
       return authenticate_with_challenge(password, challenge) unless challenge.empty?
       return false if password.blank?
-      ldap = self.ldap_connection
-      ldap.bind :method => :simple,
-                :username => ldap_dn,
-                :password => password
+      self.class.ldap_connection.bind :method => :simple,
+                                      :username => ldap_dn,
+                                      :password => password
     end
 
     def ldap_dn
-      "#{dn},#{self.ldap_spec[:root_dn]}"
+      "#{dn},#{self.ldap_spec[:base]}"
     end
 
+    # The callback when records are created
     def ldap_create
-      self.class.ldap_connection.add ldap_dn, to_ldap_hash.delete_if {|k, v| v.empty?}
+      # We delete nil values or empty arrays because that is how we indicate that something is not present
+      attributes = to_ldap_hash.delete_if {|key, value| value.nil? || value == [] || value == [nil]}
+      self.class.ldap_connection.add :dn => ldap_dn,
+                                     :attributes => attributes
     end
 
+    # Callback when records are updated
     def ldap_update
       self.class.ldap_connection.open do |ldap|
         to_ldap_hash.each_pair do |key, value|
@@ -111,11 +118,13 @@ module UpdatesToLDAP
       end
     end
 
+    # Callback when records are deleted
     def ldap_destroy
-      self.class.ldap_connection.delete ldap_dn
+      self.class.ldap_connection.delete :dn => ldap_dn
     end
 
-    def get_ldap_password
+    # Gets userPassword from ldap
+    def ldap_password
       result = self.class.ldap_connection.search(
         :base => ldap_dn,
         :scope => Net::LDAP::SearchScope_BaseObject,
@@ -127,10 +136,13 @@ module UpdatesToLDAP
       result[0]['userPassword'][0]
     end
 
-    def ldap_update_password (password)
-      system "/usr/local/bin/ldappasswd", "-x", "-D", self.class.ldap_spec[:bind_dn], "-w", self.class.ldap_spec[:bind_pw], "-s", password, ldap_dn
+    # Sets the userPassword. Note that at present you must save the record itself first, since
+    # this will not create the LDAP entry.
+    def ldap_password= password
+      self.class.ldap_connection.replace_attribute ldap_dn, :userPassword, [password]
     end
 
+    # Returns our ldap entry as a hash
     def get_ldap_hash
       result = self.class.ldap_connection.search(
         :base => ldap_dn,
