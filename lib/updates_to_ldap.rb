@@ -139,7 +139,13 @@ module UpdatesToLDAP
     # Sets the userPassword. Note that at present you must save the record itself first, since
     # this will not create the LDAP entry.
     def ldap_password= password
-      self.class.ldap_connection.replace_attribute ldap_dn, :userPassword, [password]
+      system "/usr/bin/ldappasswd", "-x",
+                                    "-h", self.class.ldap_spec[:host],
+                                    "-p", self.class.ldap_spec[:port].to_s,
+                                    "-D", self.class.ldap_spec[:auth][:username],
+                                    "-w", self.class.ldap_spec[:auth][:password],
+                                    "-s", password,
+                                    ldap_dn
     end
 
     # Returns our ldap entry as a hash
