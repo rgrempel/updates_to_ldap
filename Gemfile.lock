@@ -2,10 +2,10 @@ PATH
   remote: .
   specs:
     updates_to_ldap (0.0.1)
-      activemodel (>= 3.0.0beta3)
-      rails (>= 3.0.0beta3)
+      activemodel (>= 3)
+      net-ldap
+      rails (>= 3)
       ruby-hmac
-      ruby-ldap
 
 GEM
   remote: http://rubygems.org/
@@ -48,6 +48,7 @@ GEM
       mime-types
       treetop (>= 1.4.5)
     mime-types (1.16)
+    net-ldap (0.1.1)
     polyglot (0.3.1)
     rack (1.2.1)
     rack-mount (0.6.13)
@@ -69,7 +70,6 @@ GEM
       thor (~> 0.14.0)
     rake (0.8.7)
     ruby-hmac (0.4.0)
-    ruby-ldap (0.9.11)
     thor (0.14.3)
     treetop (1.4.8)
       polyglot (>= 0.3.1)
@@ -79,8 +79,8 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  activemodel (>= 3.0.0beta3)
-  rails (>= 3.0.0beta3)
+  activemodel (>= 3)
+  net-ldap
+  rails (>= 3)
   ruby-hmac
-  ruby-ldap
   updates_to_ldap (= 0.0.1)!

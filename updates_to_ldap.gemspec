@@ -11,10 +11,10 @@ Gem::Specification.new do |gem|
  
   gem.platform = Gem::Platform::RUBY
 
-  gem.add_dependency 'ruby-ldap'
+  gem.add_dependency 'net-ldap'
   gem.add_dependency 'ruby-hmac'
-  gem.add_dependency 'rails', '>= 3.0.0beta3'
-  gem.add_dependency 'activemodel', '>= 3.0.0beta3'
+  gem.add_dependency 'rails', '>= 3'
+  gem.add_dependency 'activemodel', '>= 3'
 
   gem.has_rdoc = true
   gem.rdoc_options.concat %W{--main README.rdoc -S -N}

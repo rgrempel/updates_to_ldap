@@ -1,5 +1,4 @@
 dn: dc=directory_test,dc=local
-changeType: add
 dc: directory_test
 objectClass: dcObject
 objectClass: organization
@@ -7,6 +6,5 @@ o: Organization
 description: An organization
 
 dn: ou=People,dc=directory_test,dc=local
-changeType: add
 objectClass: organizationalUnit
 ou: People

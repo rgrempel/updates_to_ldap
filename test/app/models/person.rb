@@ -1,3 +1,3 @@
 class Person < ActiveRecord::Base
-  updates_to_ldap
+  authenticates_to_ldap
 end
