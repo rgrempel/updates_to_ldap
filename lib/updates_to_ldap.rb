@@ -3,6 +3,14 @@ require 'hmac-sha1'
 require 'active_model'
 require 'rails'
 
+class Hash
+  def ldap_merge hsh
+    merge hsh do |key, oldvalue, newvalue|
+      [oldvalue].concat([newvalue]).flatten
+    end
+  end
+end
+
 module UpdatesToLDAP
   class ServerError < RuntimeError
     attr_reader :operation_result
