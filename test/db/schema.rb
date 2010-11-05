@@ -10,7 +10,15 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20100606014725) do
+ActiveRecord::Schema.define(:version => 20101105024521) do
+
+  create_table "invalid_people", :force => true do |t|
+    t.string   "first_name"
+    t.string   "last_name"
+    t.string   "email"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
 
   create_table "people", :force => true do |t|
     t.string   "first_name"

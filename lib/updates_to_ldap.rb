@@ -11,19 +11,28 @@ class Hash
   end
 end
 
-module UpdatesToLDAP
-  class ServerError < RuntimeError
-    attr_reader :operation_result
+module Net
+  class LDAP
+    class ServerError < RuntimeError
+      attr_reader :operation_result
 
-    def initialize ldap
-      @operation_result = ldap.get_operation_result
+      def initialize result
+        @operation_result = result
+        super
+      end
+
+      def to_s
+        @operation_result.inspect
+      end
     end
 
-    def to_str
-      @operation_result.inspect
+    def exception
+      ServerError.new get_operation_result
     end
   end
+end
 
+module UpdatesToLDAP
   class Railtie < Rails::Railtie
     config.updates_to_ldap = ActiveSupport::OrderedOptions.new
 
@@ -73,7 +82,7 @@ module UpdatesToLDAP
           Net::LDAP::Dataset.read_ldif(f).each_pair do |dn, attributes|
             ldap.add :dn => dn, :attributes => attributes
             # 68 is record already exists
-            raise ServerError.new(ldap) unless [0, 68].include?(ldap.get_operation_result.code)
+            raise ldap unless [0, 68].include?(ldap.get_operation_result.code)
           end
         end
       end
@@ -113,8 +122,10 @@ module UpdatesToLDAP
     def ldap_create
       # We delete nil values or empty arrays because that is how we indicate that something is not present
       attributes = to_ldap_hash.delete_if {|key, value| value.nil? || value == [] || value == [nil]}
-      self.class.ldap_connection.add :dn => ldap_dn,
-                                     :attributes => attributes
+      self.class.ldap_connection.open do |ldap|
+        ldap.add :dn => ldap_dn, :attributes => attributes
+        raise ldap unless ldap.get_operation_result.code == 0
+      end
     end
 
     # Callback when records are updated
@@ -122,13 +133,17 @@ module UpdatesToLDAP
       self.class.ldap_connection.open do |ldap|
         to_ldap_hash.each_pair do |key, value|
           ldap.replace_attribute ldap_dn, key, value
+          raise ldap unless ldap.get_operation_result.code == 0
         end
       end
     end
 
     # Callback when records are deleted
     def ldap_destroy
-      self.class.ldap_connection.delete :dn => ldap_dn
+      self.class.ldap_connection.open do |ldap|
+        ldap.delete :dn => ldap_dn
+        raise ldap unless ldap.get_operation_result.code == 0
+      end
     end
 
     # Gets userPassword from ldap
