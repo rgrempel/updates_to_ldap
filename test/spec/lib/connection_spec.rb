@@ -25,7 +25,7 @@ describe :ldap_connection do
     Person.process_ldif Rails.root.join("spec", "fixtures", "root.ldif")
     Person.ldap_connection.open do |ldap|
       result = ldap.search(
-        :base => Person.ldap_spec[:base],
+        :base => Person.updates_to_ldap_options[:ldap_spec][:base],
         :scope => Net::LDAP::SearchScope_BaseObject,
         :filter => "objectclass=*",
         :return_result => true
@@ -35,7 +35,7 @@ describe :ldap_connection do
 
       Person.delete_ldap_base
       result = ldap.search(
-        :base => Person.ldap_spec[:base],
+        :base => Person.updates_to_ldap_options[:ldap_spec][:base],
         :scope => Net::LDAP::SearchScope_BaseObject,
         :filter => "objectclass=*",
         :return_result => true

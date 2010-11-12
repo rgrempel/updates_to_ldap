@@ -44,24 +44,37 @@ end
 
 module UpdatesToLDAP
   class Railtie < Rails::Railtie
-    config.updates_to_ldap = ActiveSupport::OrderedOptions.new
-
     initializer :updates_to_ldap_establish_connection do
       # We load a default configuration in ActiveRecord::Base
-      config = Rails.root.join("config", "updates_to_ldap.yml")
-      if File.exist?(config)
-        spec = YAML::load_file(config)[Rails.env].symbolize_keys
-        ActiveRecord::Base.establish_ldap_connection spec
+      file = Rails.root.join("config", "updates_to_ldap.yml")
+      if File.exist?(file)
+        config.updates_to_ldap_spec = YAML::load_file(file)[Rails.env].symbolize_keys
+      else
+        config.updates_to_ldap_spec = {}
       end
     end
   end
 
   module ClassMethods
+    def setup_updates_to_ldap_options options={}
+      class_inheritable_accessor :updates_to_ldap_options
+      self.updates_to_ldap_options ||= {}
+
+      options[:ldap_spec] ||= {}
+      self.updates_to_ldap_options[:ldap_spec] ||= {}
+      self.updates_to_ldap_options[:ldap_spec] = {
+        :host => 'localhost',
+        :port => 389
+      }.merge(UpdatesToLDAP::Railtie.config.updates_to_ldap_spec).
+        merge(self.updates_to_ldap_options[:ldap_spec]).
+        merge(options[:ldap_spec].symbolize_keys)
+    end
+
     # Return an ldap connection. We construct it lazily, per-class, and
     # make it thread-local.
     def ldap_connection
       key = "__#{self}__ldap_connection".to_sym
-      Thread.current[key] = Net::LDAP.new(self.ldap_spec) unless Thread.current[key]
+      Thread.current[key] = Net::LDAP.new(self.updates_to_ldap_options[:ldap_spec]) unless Thread.current[key]
       Thread.current[key]
     end
 
@@ -70,7 +83,7 @@ module UpdatesToLDAP
     def delete_ldap_base
       self.ldap_connection.nested_open do |ldap|
         entries = ldap.search(
-          :base => self.ldap_spec[:root_dn],
+          :base => self.updates_to_ldap_options[:ldap_spec][:root_dn],
           :scope => Net::LDAP::SearchScope_WholeSubtree,
           :filter => "objectClass=*",
           :attributes => ["objectClass"],
@@ -129,7 +142,7 @@ module UpdatesToLDAP
     end
 
     def ldap_dn
-      "#{dn},#{self.ldap_spec[:base]}"
+      "#{dn},#{self.updates_to_ldap_options[:ldap_spec][:base]}"
     end
 
     # Whether the ldap record exists
@@ -194,11 +207,12 @@ module UpdatesToLDAP
     # Sets the userPassword. Note that at present you must save the record itself first, since
     # this will not create the LDAP entry.
     def ldap_password= password
+      spec = self.class.updates_to_ldap_options[:ldap_spec]
       system "/usr/bin/ldappasswd", "-x",
-                                    "-h", self.class.ldap_spec[:host],
-                                    "-p", self.class.ldap_spec[:port].to_s,
-                                    "-D", self.class.ldap_spec[:auth][:username],
-                                    "-w", self.class.ldap_spec[:auth][:password],
+                                    "-h", spec[:host],
+                                    "-p", spec[:port].to_s,
+                                    "-D", spec[:auth][:username],
+                                    "-w", spec[:auth][:password],
                                     "-s", password,
                                     ldap_dn
     end
@@ -251,30 +265,18 @@ module UpdatesToLDAP
 end
 
 class ActiveRecord::Base
-  class_inheritable_accessor :ldap_spec
-
-  def self.authenticates_to_ldap spec=nil
-    establish_ldap_connection spec
-
+  def self.authenticates_to_ldap options={}
     include UpdatesToLDAP::InstanceMethods
     extend UpdatesToLDAP::ClassMethods
+
+    setup_updates_to_ldap_options options
   end
 
-  def self.updates_to_ldap spec=nil
-    authenticates_to_ldap spec
+  def self.updates_to_ldap options={}
+    authenticates_to_ldap options
 
     after_create  :ldap_create
     after_update  :ldap_update
     after_destroy :ldap_destroy
-  end
-
-  def self.establish_ldap_connection spec
-    if spec
-      self.ldap_spec ||= {}
-      self.ldap_spec = {
-        :host => 'localhost',
-        :port => 389
-      }.merge(self.ldap_spec).merge(spec.symbolize_keys)
-    end
   end
 end
