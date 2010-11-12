@@ -29,6 +29,16 @@ module Net
     def exception
       ServerError.new get_operation_result
     end
+
+    def nested_open
+      if @open_connection
+        yield self
+      else
+        open do |ldap|
+          yield ldap
+        end
+      end
+    end
   end
 end
 
@@ -54,7 +64,7 @@ module UpdatesToLDAP
     # Deletes the ldap_base ... mostly for fixtures ... you
     # generally don't want to do this!
     def delete_ldap_base
-      self.ldap_connection.open do |ldap|
+      self.ldap_connection.nested_open do |ldap|
         entries = ldap.search(
           :base => self.ldap_spec[:root_dn],
           :scope => Net::LDAP::SearchScope_WholeSubtree,
@@ -77,7 +87,7 @@ module UpdatesToLDAP
     # We ignore errors for records that already exist, assuming that you
     # just haven't deleted your fixtures.
     def process_ldif file
-      self.ldap_connection.open do |ldap|
+      self.ldap_connection.nested_open do |ldap|
         File.open(file) do |f|
           Net::LDAP::Dataset.read_ldif(f).each_pair do |dn, attributes|
             ldap.add :dn => dn, :attributes => attributes
@@ -122,7 +132,7 @@ module UpdatesToLDAP
     def ldap_create
       # We delete nil values or empty arrays because that is how we indicate that something is not present
       attributes = to_ldap_hash.delete_if {|key, value| value.nil? || value == [] || value == [nil]}
-      self.class.ldap_connection.open do |ldap|
+      self.class.ldap_connection.nested_open do |ldap|
         ldap.add :dn => ldap_dn, :attributes => attributes
         raise ldap unless ldap.get_operation_result.code == 0
       end
@@ -130,7 +140,7 @@ module UpdatesToLDAP
 
     # Callback when records are updated
     def ldap_update
-      self.class.ldap_connection.open do |ldap|
+      self.class.ldap_connection.nested_open do |ldap|
         to_ldap_hash.each_pair do |key, value|
           ldap.replace_attribute ldap_dn, key, value
           raise ldap unless ldap.get_operation_result.code == 0
@@ -140,7 +150,7 @@ module UpdatesToLDAP
 
     # Callback when records are deleted
     def ldap_destroy
-      self.class.ldap_connection.open do |ldap|
+      self.class.ldap_connection.nested_open do |ldap|
         ldap.delete :dn => ldap_dn
         raise ldap unless ldap.get_operation_result.code == 0
       end
