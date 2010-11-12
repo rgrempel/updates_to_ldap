@@ -166,7 +166,7 @@ module UpdatesToLDAP
     def ldap_destroy
       self.class.ldap_connection.nested_open do |ldap|
         ldap.delete :dn => ldap_dn
-        raise ldap unless ldap.get_operation_result.code == 0
+        raise ldap unless [0, 32].include?(ldap.get_operation_result.code) # 32 is that it does not exist
       end
     end
 

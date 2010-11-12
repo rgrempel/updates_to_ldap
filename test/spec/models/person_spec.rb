@@ -35,6 +35,14 @@ describe Person do
     end
   end
 
+  it "should not throw and error if deleting an ldap entry that does not exist" do
+    p = Person.create :first_name => "Fred", :last_name => "Jones"
+    p.ldap_exists?.should == true
+    p.ldap_destroy
+    p.ldap_exists?.should == false
+    lambda {p.destroy}.should_not raise_exception
+  end
+
   it "should update an ldap entry when updating a person" do
     Person.ldap_connection.open do |ldap|
       p = Person.create :first_name => "Fred", :last_name => "Jones", :email => "fred@gmail.com"
