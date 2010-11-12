@@ -132,6 +132,15 @@ module UpdatesToLDAP
       "#{dn},#{self.ldap_spec[:base]}"
     end
 
+    # Whether the ldap record exists
+    def ldap_exists?
+      self.class.ldap_connection.search(
+        :base => ldap_dn,
+        :scope => Net::LDAP::SearchScope_BaseObject,
+        :filter => 'objectClass=*'
+      ) ? true : false
+    end
+
     # The callback when records are created
     def ldap_create
       # We delete nil values or empty arrays because that is how we indicate that something is not present
