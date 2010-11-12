@@ -1,6 +1,8 @@
 class Person < ActiveRecord::Base
   updates_to_ldap
 
+  attr_accessor :use_person_for_objectclass
+
   def full_name
     "#{first_name} #{last_name}"
   end
@@ -10,12 +12,22 @@ class Person < ActiveRecord::Base
   end
 
   def to_ldap_hash
-    {
-      :objectClass => ['top', 'inetOrgPerson'],
+    retval = {
+      :objectClass => [self.use_person_for_objectclass ? 'person' : 'inetOrgPerson'],
       :cn => [full_name],
-      :givenName => [first_name],
       :sn => [last_name],
-      :mail => email.nil? ? [] : [email]
     }
+    if self.use_person_for_objectclass
+      retval.merge!({
+        :givenName => [],
+        :mail => []
+      })
+    else
+      retval.merge!({
+        :givenName => [first_name],
+        :mail => email.nil? ? [] : [email]
+      })
+    end
+    retval
   end
 end

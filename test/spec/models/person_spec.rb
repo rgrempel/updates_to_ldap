@@ -35,6 +35,17 @@ describe Person do
     end
   end
 
+  it "should be able to switch to a more detailed objectclass when updating" do
+    p = Person.new :first_name => "Fred", :last_name => "Jones", :email => "fredjones@gmail.com"
+    p.use_person_for_objectclass = true
+    p.save
+    p.ldap_exists?.should == true
+    p.get_ldap_hash[:mail].should == []
+    p.use_person_for_objectclass = false
+    p.save
+    p.get_ldap_hash[:mail].should == ["fredjones@gmail.com"]
+  end
+
   it "should not throw and error if deleting an ldap entry that does not exist" do
     p = Person.create :first_name => "Fred", :last_name => "Jones"
     p.ldap_exists?.should == true
