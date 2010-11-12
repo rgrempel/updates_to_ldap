@@ -57,8 +57,12 @@ module UpdatesToLDAP
   end
 
   module ClassMethods
+    # Return an ldap connection. We construct it lazily, per-class, and
+    # make it thread-local.
     def ldap_connection
-      Net::LDAP.new self.ldap_spec
+      key = "__#{self}__ldap_connection".to_sym
+      Thread.current[key] = Net::LDAP.new(self.ldap_spec) unless Thread.current[key]
+      Thread.current[key]
     end
 
     # Deletes the ldap_base ... mostly for fixtures ... you
