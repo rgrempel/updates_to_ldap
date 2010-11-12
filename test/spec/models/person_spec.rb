@@ -6,6 +6,12 @@ describe Person do
     Person.process_ldif Rails.root.join("spec","fixtures","root.ldif")
   end
 
+  it "should have no conditions" do
+    p = Person.new
+    p.class.updates_to_ldap_options[:if].should == []
+    p.ldap_apply_conditions.should == true
+  end
+
   it "should be able to tell if the ldap entry exists" do
     p = Person.new :first_name => "Fred", :last_name => "Jones"
     p.ldap_exists?.should == false

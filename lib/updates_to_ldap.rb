@@ -57,17 +57,23 @@ module UpdatesToLDAP
 
   module ClassMethods
     def setup_updates_to_ldap_options options={}
-      class_inheritable_accessor :updates_to_ldap_options
-      self.updates_to_ldap_options ||= {}
-
       options[:ldap_spec] ||= {}
-      self.updates_to_ldap_options[:ldap_spec] ||= {}
+      options[:if] ||= []
+
+      class_inheritable_accessor :updates_to_ldap_options
+      superclass_options = self.updates_to_ldap_options || {}
+      superclass_options[:ldap_spec] ||= {}
+      superclass_options[:if] ||= []
+
+      self.updates_to_ldap_options = {}
       self.updates_to_ldap_options[:ldap_spec] = {
         :host => 'localhost',
         :port => 389
       }.merge(UpdatesToLDAP::Railtie.config.updates_to_ldap_spec).
-        merge(self.updates_to_ldap_options[:ldap_spec]).
+        merge(superclass_options[:ldap_spec]).
         merge(options[:ldap_spec].symbolize_keys)
+
+      self.updates_to_ldap_options[:if] = superclass_options[:if].dup.concat [options[:if]].flatten.compact
     end
 
     # Return an ldap connection. We construct it lazily, per-class, and
@@ -145,6 +151,10 @@ module UpdatesToLDAP
       "#{dn},#{self.updates_to_ldap_options[:ldap_spec][:base]}"
     end
 
+    def ldap_apply_conditions
+      self.class.updates_to_ldap_options[:if].all? {|p| self.send p}
+    end
+
     # Whether the ldap record exists
     def ldap_exists?
       self.class.ldap_connection.search(
@@ -156,6 +166,7 @@ module UpdatesToLDAP
 
     # The callback when records are created
     def ldap_create
+      return unless ldap_apply_conditions
       # We delete nil values or empty arrays because that is how we indicate that something is not present
       attributes = to_ldap_hash.delete_if {|key, value| value.nil? || value == [] || value == [nil]}
       self.class.ldap_connection.nested_open do |ldap|
@@ -167,19 +178,23 @@ module UpdatesToLDAP
 
     # Callback when records are updated
     def ldap_update
-      self.class.ldap_connection.nested_open do |ldap|
-        to_ldap_hash.each_pair do |key, value|
-          ldap.replace_attribute ldap_dn, key, value
-          case ldap.get_operation_result.code
-            when 32 # entry does not exist
-              return ldap_create
-            when 69 # cannot change structural superclass
-              ldap_destroy
-              return ldap_create
-            when 0 # do nothing
-            else raise ldap
+      if ldap_apply_conditions
+        self.class.ldap_connection.nested_open do |ldap|
+          to_ldap_hash.each_pair do |key, value|
+            ldap.replace_attribute ldap_dn, key, value
+            case ldap.get_operation_result.code
+              when 32 # entry does not exist
+                return ldap_create
+              when 69 # cannot change structural superclass
+                ldap_destroy
+                return ldap_create
+              when 0 # do nothing
+              else raise ldap
+            end
           end
         end
+      else
+        ldap_destroy
       end
     end
 
