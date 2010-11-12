@@ -18,7 +18,7 @@ describe :ldap_connection do
     result = ldap.search :filter => "objectClass=*",
                          :scope => Net::LDAP::SearchScope_WholeSubtree
     puts ldap.get_operation_result.inspect unless result
-    result.size.should == 2
+    result.size.should == 3
   end
 
   it "should be able to delete the base dn" do
