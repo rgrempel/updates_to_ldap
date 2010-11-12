@@ -13,6 +13,14 @@ describe Person do
     p.ldap_exists?.should == true
   end
 
+  it "should switch to update if creating an ldap entry that already exists" do
+    p = Person.new :first_name => "Existing", :last_name => "Person", :email => "newaddress@local"
+    p.ldap_exists?.should == true
+    p.get_ldap_hash[:mail].should == ["existingperson@local"]
+    p.save
+    p.get_ldap_hash[:mail].should == ["newaddress@local"]
+  end
+
   it "should create an ldap entry when creating a new person" do
     Person.ldap_connection.open do |ldap|
       result = ldap.search :filter => "cn=Fred Jones",

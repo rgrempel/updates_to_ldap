@@ -8,3 +8,10 @@ description: An organization
 dn: ou=People,dc=directory_test,dc=local
 objectClass: organizationalUnit
 ou: People
+
+dn: cn=Existing Person,ou=People,dc=directory_test,dc=local
+objectClass: inetOrgPerson
+cn: Existing Person
+givenName: Existing
+sn: Person
+mail: existingperson@local

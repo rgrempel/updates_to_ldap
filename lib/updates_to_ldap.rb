@@ -147,6 +147,7 @@ module UpdatesToLDAP
       attributes = to_ldap_hash.delete_if {|key, value| value.nil? || value == [] || value == [nil]}
       self.class.ldap_connection.nested_open do |ldap|
         ldap.add :dn => ldap_dn, :attributes => attributes
+        return ldap_update if ldap.get_operation_result.code == 68 # record already exists, so update
         raise ldap unless ldap.get_operation_result.code == 0
       end
     end
