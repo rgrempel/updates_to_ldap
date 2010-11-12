@@ -157,6 +157,7 @@ module UpdatesToLDAP
       self.class.ldap_connection.nested_open do |ldap|
         to_ldap_hash.each_pair do |key, value|
           ldap.replace_attribute ldap_dn, key, value
+          return ldap_create if ldap.get_operation_result.code == 32 # 32 is not existing
           raise ldap unless ldap.get_operation_result.code == 0
         end
       end

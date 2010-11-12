@@ -43,6 +43,17 @@ describe Person do
     lambda {p.destroy}.should_not raise_exception
   end
 
+  it "should switch to create if updating an ldap entry that does not exist" do
+    p = Person.create :first_name => "Fred", :last_name => "Jones"
+    p.ldap_exists?.should == true
+    p.ldap_destroy
+    p.ldap_exists?.should == false
+    p.email = "fredjones@gmail.com"
+    p.save
+    p.ldap_exists?.should == true
+    p.get_ldap_hash[:mail].should == ["fredjones@gmail.com"]
+  end
+
   it "should update an ldap entry when updating a person" do
     Person.ldap_connection.open do |ldap|
       p = Person.create :first_name => "Fred", :last_name => "Jones", :email => "fred@gmail.com"
