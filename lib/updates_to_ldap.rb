@@ -43,6 +43,12 @@ module Net
 end
 
 module UpdatesToLDAP
+  # A big flag to enable/disable the callbacks. Note that this is not thread-safe,
+  # so it really is only for limited purposes ... for instance, if you are testing
+  # and you don't want the overhead of saving to LDAP.
+  mattr_accessor :enabled
+  self.enabled = true
+
   class Railtie < Rails::Railtie
     initializer :updates_to_ldap_establish_connection do
       # We load a default configuration in ActiveRecord::Base
@@ -87,6 +93,7 @@ module UpdatesToLDAP
     # Deletes the ldap_base ... mostly for fixtures ... you
     # generally don't want to do this!
     def delete_ldap_base
+      return unless UpdatesToLDAP.enabled
       self.ldap_connection.nested_open do |ldap|
         entries = ldap.search(
           :base => self.updates_to_ldap_options[:ldap_spec][:root_dn],
@@ -110,6 +117,7 @@ module UpdatesToLDAP
     # We ignore errors for records that already exist, assuming that you
     # just haven't deleted your fixtures.
     def process_ldif file
+      return unless UpdatesToLDAP.enabled
       self.ldap_connection.nested_open do |ldap|
         File.open(file) do |f|
           Net::LDAP::Dataset.read_ldif(f).each_pair do |dn, attributes|
@@ -123,6 +131,7 @@ module UpdatesToLDAP
 
     # Compares the existing ldap to what we would produce
     def check_ldap(each_line = false)
+      return unless UpdatesToLDAP.enabled
       find(:all).each do |m|
         print "#{m.dn}\n" if each_line
         diff = m.get_ldap_diff
@@ -166,6 +175,7 @@ module UpdatesToLDAP
 
     # The callback when records are created
     def ldap_create
+      return unless UpdatesToLDAP.enabled
       return unless ldap_apply_conditions
       # We delete nil values or empty arrays because that is how we indicate that something is not present
       attributes = to_ldap_hash.delete_if {|key, value| value.nil? || value == [] || value == [nil]}
@@ -178,6 +188,7 @@ module UpdatesToLDAP
 
     # Callback when records are updated
     def ldap_update
+      return unless UpdatesToLDAP.enabled
       if ldap_apply_conditions
         self.class.ldap_connection.nested_open do |ldap|
           to_ldap_hash.each_pair do |key, value|
@@ -200,6 +211,7 @@ module UpdatesToLDAP
 
     # Callback when records are deleted
     def ldap_destroy
+      return unless UpdatesToLDAP.enabled
       self.class.ldap_connection.nested_open do |ldap|
         ldap.delete :dn => ldap_dn
         raise ldap unless [0, 32].include?(ldap.get_operation_result.code) # 32 is that it does not exist
@@ -208,6 +220,7 @@ module UpdatesToLDAP
 
     # Gets userPassword from ldap
     def ldap_password
+      return unless UpdatesToLDAP.enabled
       result = self.class.ldap_connection.search(
         :base => ldap_dn,
         :scope => Net::LDAP::SearchScope_BaseObject,
@@ -222,6 +235,7 @@ module UpdatesToLDAP
     # Sets the userPassword. Note that at present you must save the record itself first, since
     # this will not create the LDAP entry.
     def ldap_password= password
+      return unless UpdatesToLDAP.enabled
       spec = self.class.updates_to_ldap_options[:ldap_spec]
       system "/usr/bin/ldappasswd", "-x",
                                     "-h", spec[:host],
@@ -234,6 +248,7 @@ module UpdatesToLDAP
 
     # Returns our ldap entry as a hash
     def get_ldap_hash
+      return unless UpdatesToLDAP.enabled
       result = self.class.ldap_connection.search(
         :base => ldap_dn,
         :scope => Net::LDAP::SearchScope_BaseObject,

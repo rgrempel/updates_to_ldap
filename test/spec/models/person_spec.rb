@@ -2,6 +2,7 @@ require_relative '../spec_helper'
 
 describe Person do
   before(:each) do
+    UpdatesToLDAP.enabled = true
     Person.delete_ldap_base
     Person.process_ldif Rails.root.join("spec","fixtures","root.ldif")
   end
@@ -17,6 +18,14 @@ describe Person do
     p.ldap_exists?.should == false
     p.save
     p.ldap_exists?.should == true
+  end
+
+  it "should not throw error on save if disabled" do
+    Person.delete_ldap_base
+    UpdatesToLDAP.enabled = false
+    lambda {
+      p = Person.create :first_name => "bob", :last_name => "fredricson"
+    }.should_not raise_exception
   end
 
   it "should switch to update if creating an ldap entry that already exists" do
